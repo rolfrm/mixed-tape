@@ -138,3 +138,10 @@
 
 (defmacro % (x y)
   `(%js "( " ,x " % " ,y " )"))
+
+
+(defmacro then (promise &rest handler)
+  (println 'then promise handler)
+  (promise.then `(lambda (result) ,@handler)))
+
+(println 'loaded-lisp)

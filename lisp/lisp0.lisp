@@ -796,6 +796,8 @@
 	  
 (defvar process:args (or ___process_args '()))
 
-(defmacro await (promise &rest body)
+(defmacro then (promise &rest handler)
+  (println 'then promise handler)
+  (promise.then `(lambda (result) ,@handler)))
 
-  )
+(println 'loaded-lisp)

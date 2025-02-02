@@ -10,11 +10,8 @@
         #playlist {
             list-style-type: none;
             padding: 0;
-        }
-        #playlist li {
-            padding: 10px;
-            border-bottom: 1px solid #ccc;
-            cursor: pointer;
+				overflow-y: scroll;
+				max-height: 20vh;
         }
         #playlist li:hover {
             background-color: #f0f0f0;
@@ -26,21 +23,73 @@
             margin-top: 20px;
             font-weight: bold;
         }
+		  
+        #playlist li {
+            display: flex;      /* Flexbox layout */
+            align-items: center;
+            justify-content: space-between;
+            gap: 0px;          /* Space between elements */
+            padding: 0px 0px;  /* More compact padding */
+            border-bottom: 1px solid #eee;  /* Lighter border */
+            cursor: pointer;
+            transition: background 0.2s ease;  /* Smooth hover effect */
+				margin: 0px;
+				line-height: 0px;
+        }
+        #playlist li:hover {
+            background-color: #f8f8f8;
+        }
+        #playlist li span {
+            flex-grow: 1;       /* Take available space */
+            white-space: nowrap;  /* Prevent text wrapping */
+            overflow: hidden;
+            text-overflow: ellipsis;  /* Show ... for long text */
+            padding-right: 10px;  /* Space before button */
+				padding: 0px;
+				margin: 0px;
+							
+        }
+        #playlist li button {
+            flex-shrink: 0;     /* Prevent button shrinking */
+            padding: 5px 32px;   /* More compact button */
+            font-size: 0.9em;   /* Slightly smaller text */
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        #playlist li button:hover {
+            background: #cc0000;  /* Darker hover state */
+        }
+
+		  #playlist::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        #playlist::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        #playlist::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
     </style>
     <script defer src="/bundle.js"></script></head>
     <body>
     <h1>Music Player</h1>
     <form id="uploadForm">
         <input type="file" id="fileInput" accept="*" multiple>
-        <button type="submit">Upload Song</button>
     </form>
     <ul id="playlist"></ul>
     <div id="nowPlaying">Now Playing: <span id="currentSong"></span></div>
 	 <div id="controls">
 		<button id="playButton">Play </button>
 		<button id="nextButton">Next </button>
+		<input type="checkbox" id="shuffleCheckbox"/>
 		</div>
-    <audio id="audioPlayer" controls></audio>
+	 <audio id="audioPlayer1" controls preload="auto" style="display: none;"></audio>
+	 <audio id="audioPlayer2" controls preload="auto" style="display: none;"></audio>
 	 <script>
           document.addEventListener('DOMContentLoaded', async function() 
           {
