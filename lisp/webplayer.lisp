@@ -1,17 +1,7 @@
-
+(println "loading web player")
 (defmacro then (promise &rest handler)
   `(let ((_promise ,promise))
 	 (_promise.then (lambda (result) ,@handler))))
-
-(defun shuffle(array)
-  (let ((l (length array)))
-	 (dotimes (i l)
-		(let ((s (math:random 0 l)))
-		  (swap (th array i) (th array s))))))
-				
-
-(println 'loaded-lisp)
-
 
 (defun get-query-string(key)
   (let ((queryString window.location.search)
@@ -28,9 +18,6 @@
 	 (set options.album "?")
 	 (%js "new MediaMetadata(options)")))
 
-
-
-(println 'webplayer (get-query-string "playlist"))
 (defvar upload-form (get-element "uploadForm"))
 (defvar file-input (get-element "fileInput"))
 (defvar store-name (or (get-query-string "playlist") "songs"))
@@ -44,13 +31,12 @@
 
 (defvar playlist-element (get-element "playlist"))
 (defvar playbutton-element (get-element "playButton"))
+(defvar pausebutton-element (get-element "pauseButton"))
 (defvar nextbutton-element (get-element "nextButton"))
 (defvar shuffle-checkbox-element (get-element "shuffleCheckbox"))
 (defvar db nil)
 (defvar wakelock nil)
 (defvar audio-context (%js "new AudioContext()"))
-
-
 
 (let ((req (indexedDB.open store-name 1)))
   (set req.onupgradeneeded (lambda (evt)
@@ -59,7 +45,6 @@
 									  (unless (db.objectStoreNames.contains store-name)
 										 (let ((schema (%js "{}")))
 											(set schema.keyPath "name")
-											;(set schema.autoIncrement )
 											(db.createObjectStore store-name schema)))))
   (set req.onsuccess (lambda (evt)
 							  (set db evt.target.result)
@@ -88,12 +73,11 @@
 	 (set reader.onload (lambda (e)
 								 (println 'onload)
 								 (println e.target.result)
-								 (console.log f)
 							(let ((t (db.transaction store-name "readwrite"))
 									(store (t.objectStore store-name))
 									(song (song-def f.name e.target.result))
 									(add-request (store.add song)))
-							  (console.log "Song:" song f)
+							  (prinln "Loaded song:" song.name)
 							  
 							  (set add-request.onsuccess (lambda () (println "song added to db"))))
 
@@ -101,16 +85,13 @@
 							
 							))
 	 (reader.readAsDataURL f)
-	 
-					  
-	 (println f)))
+	 ))
 
 (defun delete-song (song)
   (let ((t (db.transaction store-name "readwrite"))
 		  (store (t.objectStore store-name))
 		  (request (store.delete song)))
 	 (set request.onsuccess render-playlist)))
-	 
 
 (defun render-song (song)
   (let ((li (document.createElement "li"))
@@ -122,7 +103,6 @@
 	 (del.addEventListener "click"
 								  (lambda () (delete-song song)))
 	 (set desc.textContent song)
-													 ;(set li.textContent song)
 	 (set li.song song)
 	 (playlist-element.appendChild li)))
 												  
@@ -175,26 +155,12 @@
 										 (when song
 											(callback song)))))))
 
-(defun shuffle-songs ()
-  (shuffle playlist-element.children))
-
-;(defvar media-destination  (audio-context.createMediaStreamDestination))
-;(set audioplayer.srcObject media-destination.stream)
-
 (defvar current-playing nil)
 (defun play-song-data(song)
-  (console.log "SONG" song)
-  (println song)
+  (println 'playing song.name)
+ 
   (set navigator.mediaSession.metadata (new-media-metadata song.name))
   (set navigator.mediaSession.playbackState  "playing")
-  ;(when current-playing
-;	 (set current-playing.onended nil)
-;	 (current-playing.stop))
- ; (set current-playing (audio-context.createBufferSource))
- ; (set current-playing.buffer song.buffer)
-  ;(current-playing.connect media-destination)
-  ;(current-playing.connect audio-context.destination)
-													 ;(current-playing.start)
   (when (eq audioplayer-back.src song.data)
 	 (swap audioplayer-back audioplayer))
   (unless (eq audioplayer.src song.data)
@@ -202,9 +168,6 @@
   
   (audioplayer-back.pause)
   (audioplayer.play)
-  ;(set current-playing.onended (lambda () (play-next-song)))
-													 ;(set audioplayer.src song.data)
-  ;(audioplayer.play)
   (set current-song-element.textContent song.name)
   (set current-song-element.song song.name))
 
@@ -238,23 +201,39 @@
 
 
 
+(defun pause()
+  (println 'pause)
+  (audioplayer.pause)
+  (set navigator.mediaSession.playbackState  "paused"))
+(defun stop()
+  
+  )
+
 (playbutton-element.addEventListener "click" (lambda () (play-song 0)))
-
 (nextbutton-element.addEventListener "click" (lambda () (play-next-song)))
-;(shufflebutton-element.addEventListener "click" (lambda () (shuffle-songs)))
-
+(pausebutton-element.addEventListener "click" pause)
 
 (audioplayer-1.addEventListener "ended" (lambda () (when (eq audioplayer-1 audioplayer) (play-next-song))))
 (audioplayer-2.addEventListener "ended" (lambda () (when (eq audioplayer-2 audioplayer) (play-next-song))))
-									
+
+;; intercept that the back-object gets play due to resuming the window. No idea why this happens though.
+(audioplayer-1.addEventListener "play" (lambda ()
+													  (println 'media-play-event-1 (eq audioplayer-2 audioplayer-back))
+													  (when (eq audioplayer-1 audioplayer-back)
+														 (audioplayer-1.pause))))
+(audioplayer-2.addEventListener "play" (lambda ()
+													  (println 'media-play-event-2 (eq audioplayer-2 audioplayer-back))
+													  (when
+															(eq audioplayer-2 audioplayer-back)
+														 (audioplayer-back.pause)
+														 )))
 
 (navigator.mediaSession.setActionHandler "pause"
 													  (lambda ()
-														 (println 'pause)
-														 
-														  (audioplayer.pause)
-														  (set navigator.mediaSession.playbackState  "paused"))
-														 )
+														 (println 'pause-media-event)
+														 (pause)
+				
+														 ))
 (navigator.mediaSession.setActionHandler "nexttrack"
 													  (lambda ()
 														 (println 'next-track)
