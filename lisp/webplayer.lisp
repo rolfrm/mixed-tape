@@ -3,6 +3,16 @@
   `(let ((_promise ,promise))
 	 (_promise.then (lambda (result) ,@handler))))
 
+(defun bind(f arg)
+  (lambda () (f arg)))
+
+(defun promise(f)
+  (%js "new Promise(f)"))
+
+(defmacro promising(callback &rest body)
+  `(promise (lambda (,callback)
+				  ,@body)))
+
 (defun get-query-string(key)
   (let ((queryString window.location.search)
 		  (sp (%js "new URLSearchParams(queryString)")))
@@ -32,11 +42,11 @@
 (defvar playlist-element (get-element "playlist"))
 (defvar playbutton-element (get-element "playButton"))
 (defvar pausebutton-element (get-element "pauseButton"))
+(defvar stopbutton-element (get-element "stopButton"))
 (defvar nextbutton-element (get-element "nextButton"))
 (defvar shuffle-checkbox-element (get-element "shuffleCheckbox"))
 (defvar db nil)
 (defvar wakelock nil)
-(defvar audio-context (%js "new AudioContext()"))
 
 (let ((req (indexedDB.open store-name 1)))
   (set req.onupgradeneeded (lambda (evt)
@@ -49,7 +59,9 @@
   (set req.onsuccess (lambda (evt)
 							  (set db evt.target.result)
 							  (println 'loaded-db db)
-							  (render-playlist)
+
+							  (then (render-playlist)
+									  (preload-song))
 							  )))
 
 (defun song-def (name data)
@@ -101,7 +113,7 @@
 	 (li.appendChild del)
 	 (set del.textContent "delete")
 	 (del.addEventListener "click"
-								  (lambda () (delete-song song)))
+								  (bind delete-song song))
 	 (set desc.textContent song)
 	 (set li.song song)
 	 (playlist-element.appendChild li)))
@@ -111,13 +123,15 @@
   (let ((t (db.transaction store-name "readonly"))
 		  (store (t.objectStore store-name))
 		  (request (store.getAllKeys)))
+	 (promising complete
 	 (set request.onsuccess (lambda ()
 									  (console.log 'success request.result)
 									  (set playlist-element.innerHTML "")
 									  (let ((songs (order-by request.result (lambda (elem) elem.index))))
 									  (foreach song request.result
 												  (render-song song)
-												  (println song)))))))
+												  (println song)))
+									  (complete))))))
 
 (set file-input.onchange 
 ;									  (lambda ()
@@ -143,17 +157,23 @@
 		(mod  (th shuffle-lookup index) (length playlist-element.children) )
 		(mod index playlist-element.children.length)) 'index))
 
+
 (defun load-song (index callback)
   (let ((key-elem (println (nth playlist-element.children (actual-index index)) '>>))
 		  (key key-elem.song)
 		  (transaction (db.transaction store-name "readonly"))
  		  (store (transaction.objectStore store-name))
-		  (request (store.get key))
-		  )
-	 (set request.onsuccess (lambda (evt)
+		  (request (store.get key)))
+	 (promising
+	  complete
+	  (set request.onsuccess (lambda (evt)
 									  (let ((song request.result))
-										 (when song
-											(callback song)))))))
+										 (if song
+											  (progn
+												 (callback song)
+												 (complete))
+											  (complete)
+												 )))))))
 
 (defvar current-playing nil)
 (defun play-song-data(song)
@@ -165,13 +185,14 @@
 	 (swap audioplayer-back audioplayer))
   (unless (eq audioplayer.src song.data)
 	 (set audioplayer.src song.data))
-  
+  (println 'pause/play)
   (audioplayer-back.pause)
-  (audioplayer.play)
-  (set current-song-element.textContent song.name)
-  (set current-song-element.song song.name))
+  (then (audioplayer.play)
+		  (set current-song-element.textContent song.name)
+		  (set current-song-element.song song.name)))
 
 (defvar next-song nil)
+
 
 (defun play-song (index)
 
@@ -179,18 +200,25 @@
   (audioplayer-back.pause)
   (audioplayer.pause)
   
-  
-  (if (and next-song (eq next-song.index index))
+  (then (if (and next-song (eq next-song.index index))
 		(progn
 		  (println 'play-from-cache)
 		  (play-song-data next-song))
 		(load-song index play-song-data))
-  (load-song (+ index 1) (lambda (song)
+		  (promising complete
+			(load-song (+ index 1) (lambda (song)
 									(set next-song song)
 									(set next-song.index (+ index 1))
 									(set audioplayer-back.src song.data)
+									(complete)
+									)))))
 
-									)))
+(defun preload-song ()
+  (load-song 0 (lambda (song)
+					  (set next-song song)
+					  (set next-song.index 0)
+					  (set audioplayer.src song.data))))
+
 (defun play-next-song ()
   (let ((current current-song-element.song)
 		  (index (index-when
@@ -199,19 +227,28 @@
 	 
 	 (play-song (+ index 1))))
 
+(defun play-prev-song ()
+  (let ((current current-song-element.song)
+		  (index (index-when
+				  playlist-element.children
+				  (lambda (item) (eq current item.song)))))
+	 
+	 (play-song (- index 1))))
 
 
 (defun pause()
   (println 'pause)
   (audioplayer.pause)
-  (set navigator.mediaSession.playbackState  "paused"))
+  (set navigator.mediaSession.playbackState "paused"))
+
 (defun stop()
-  
-  )
+  (then (play-song 0)
+		  (pause)))
 
 (playbutton-element.addEventListener "click" (lambda () (play-song 0)))
 (nextbutton-element.addEventListener "click" (lambda () (play-next-song)))
 (pausebutton-element.addEventListener "click" pause)
+(stopbutton-element.addEventListener "click" stop)
 
 (audioplayer-1.addEventListener "ended" (lambda () (when (eq audioplayer-1 audioplayer) (play-next-song))))
 (audioplayer-2.addEventListener "ended" (lambda () (when (eq audioplayer-2 audioplayer) (play-next-song))))
@@ -241,7 +278,7 @@
 (navigator.mediaSession.setActionHandler "previoustrack"
 													  (lambda ()
 														 (println 'previous-track)
-														 (next-next-song)))
+														 (play-prev-song)))
 (navigator.mediaSession.setActionHandler "play"
 													  (lambda () (println 'play)
 														 
@@ -253,5 +290,4 @@
 (navigator.mediaSession.setActionHandler "seekforward" nil)
 (navigator.mediaSession.setActionHandler "seekbackward" nil)
 
-
-(println 'everything-ready)
+;(preload-song)

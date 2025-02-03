@@ -77,7 +77,8 @@
     </style>
     <script defer src="/bundle.js"></script></head>
     <body>
-    <h1>Music Player</h1>
+		<div id="main">
+    <h1>Mixed Tape</h1>
     <form id="uploadForm">
         <input type="file" id="fileInput" accept="*" multiple>
     </form>
@@ -86,9 +87,12 @@
 	 <div id="controls">
 		<button id="playButton">Play </button>
 		<button id="pauseButton">Pause </button>
+		<button id="stopButton">Stop </button>
 		<button id="nextButton">Next </button>
 		<input type="checkbox" id="shuffleCheckbox"/>
-		</div>
+	 </div>
+	 </div>
+	 
 	 <audio id="audioPlayer1" controls preload="auto" style="display: none;"></audio>
 	 <audio id="audioPlayer2" controls preload="auto" style="display: none;"></audio>
 	 <script>
