@@ -3,6 +3,21 @@
   `(let ((_promise ,promise))
 	 (_promise.then (lambda (result) ,@handler))))
 
+(defun indexes (length)
+  (let ((result (list)))
+	 (dotimes (i length)
+		(result.push i))
+	 result))
+		
+
+(defun shuffle-array (array)
+  (let ((l (length array)))
+	 (dotimes (i2 l)
+	 (let ((i (- l (+ i2 1)))
+			 (r (floor (math:random 0 (+ i 1)))))
+		(swap (th array i) (th array r))))))
+
+
 (defun bind(f arg)
   (lambda () (f arg)))
 
@@ -89,7 +104,7 @@
 									(store (t.objectStore store-name))
 									(song (song-def f.name e.target.result))
 									(add-request (store.add song)))
-							  (prinln "Loaded song:" song.name)
+							  (println "Loaded song:" song.name)
 							  
 							  (set add-request.onsuccess (lambda () (println "song added to db"))))
 
@@ -147,15 +162,22 @@
 
 	  )))
 
+
+
 (defvar shuffle-lookup (list))
-(let ((l (length playlist-element.children)))
-  (dotimes (i 1000)
-	 (shuffle-lookup.push (floor (math:random 0 10000)))))
+(defun build-shuffle-lookup()
+  (set shuffle-lookup (indexes playlist-element.childElementCount))
+  (shuffle-array shuffle-lookup))
 
 (defun actual-index (index)
-  (println (if shuffle-checkbox-element.checked
-		(mod  (th shuffle-lookup index) (length playlist-element.children) )
-		(mod index playlist-element.children.length)) 'index))
+  
+  (if shuffle-checkbox-element.checked
+		(progn
+		  (unless (eq (length shuffle-lookup) playlist-element.childElementCount)
+			 (build-shuffle-lookup))
+		  (th shuffle-lookup (mod index playlist-element.childElementCount)))
+					
+		  (mod index playlist-element.children.length)))
 
 
 (defun load-song (index callback)
@@ -164,6 +186,7 @@
 		  (transaction (db.transaction store-name "readonly"))
  		  (store (transaction.objectStore store-name))
 		  (request (store.get key)))
+	 (println 'loading-song key)
 	 (promising
 	  complete
 	  (set request.onsuccess (lambda (evt)
@@ -192,13 +215,14 @@
 		  (set current-song-element.song song.name)))
 
 (defvar next-song nil)
-
+(defvar song-index 0 )
 
 (defun play-song (index)
 
   ;; not sure why this is needed.. 
   (audioplayer-back.pause)
   (audioplayer.pause)
+  (set song-index index)
   
   (then (if (and next-song (eq next-song.index index))
 		(progn
@@ -220,12 +244,8 @@
 					  (set audioplayer.src song.data))))
 
 (defun play-next-song ()
-  (let ((current current-song-element.song)
-		  (index (index-when
-				  playlist-element.children
-				  (lambda (item) (eq current item.song)))))
-	 
-	 (play-song (+ index 1))))
+
+	 (play-song (+ song-index 1)))
 
 (defun play-prev-song ()
   (let ((current current-song-element.song)
@@ -233,7 +253,7 @@
 				  playlist-element.children
 				  (lambda (item) (eq current item.song)))))
 	 
-	 (play-song (- index 1))))
+	 (play-song (- song-index 1))))
 
 
 (defun pause()
