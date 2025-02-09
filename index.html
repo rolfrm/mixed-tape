@@ -1,6 +1,9 @@
 <html>  
     <head>
         <meta charset="utf-8"/>
+		  <link rel="manifest" href="/manifest.json">
+		  <meta name="apple-mobile-web-app-capable" content="yes">
+		  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <script src="bundle.js"></script>
             <style>
         body {
@@ -78,7 +81,27 @@
     <script defer src="/bundle.js"></script></head>
     <body>
 		<div id="main">
-    <h1>Mixed Tape</h1>
+		  <h1>Mixed Tape</h1>
+		  <div id="theme">
+			 
+		  </div>
+		  <div class="dropdown">
+                <label for="playlistDropdown">Select Playlist:</label>
+                <select id="playlistDropdown">
+                    <option value="playlist1">Playlist 1</option>
+                    <option value="playlist2">Playlist 2</option>
+                    <option value="playlist3">Playlist 3</option>
+                    <option value="newPlaylist">New Playlist...</option>
+                </select>
+            </div>
+            <div class="dropdown">
+                <label for="skinDropdown">Select Skin:</label>
+                <select id="skinDropdown">
+                    <option value="system">Basic</option>
+                    <option value="retro">Retro</option>
+                    <option value="retro3d">Retro 3D</option>
+                </select>
+            </div>
     <form id="uploadForm">
         <input type="file" id="fileInput" accept="*" multiple>
     </form>

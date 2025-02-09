@@ -1,4 +1,10 @@
 (println "loading web player")
+
+;; todo: fix in foxlisp
+(defun load2(file)
+  (lisp.LispEvalBlock (println (concat "(load \"" file "\")"))))
+
+
 (defmacro then (promise &rest handler)
   `(let ((_promise ,promise))
 	 (_promise.then (lambda (result) ,@handler))))
@@ -61,23 +67,25 @@
 (defvar nextbutton-element (get-element "nextButton"))
 (defvar shuffle-checkbox-element (get-element "shuffleCheckbox"))
 (defvar db nil)
-(defvar wakelock nil)
 
-(let ((req (indexedDB.open store-name 1)))
-  (set req.onupgradeneeded (lambda (evt)
-									  (set db evt.target.result)
-									  (println db.objectStoreNames)
-									  (unless (db.objectStoreNames.contains store-name)
-										 (let ((schema (%js "{}")))
-											(set schema.keyPath "name")
-											(db.createObjectStore store-name schema)))))
-  (set req.onsuccess (lambda (evt)
-							  (set db evt.target.result)
-							  (println 'loaded-db db)
+(defun load-db()
 
-							  (then (render-playlist)
-									  (preload-song))
-							  )))
+  (let ((req (indexedDB.open store-name 1)))
+	 (set req.onupgradeneeded (lambda (evt)
+										 (set db evt.target.result)
+										 (println db.objectStoreNames)
+										 (unless (db.objectStoreNames.contains store-name)
+											(let ((schema (%js "{}")))
+											  (set schema.keyPath "name")
+											  (db.createObjectStore store-name schema)))))
+	 (set req.onsuccess (lambda (evt)
+								 (set db evt.target.result)
+								 (println 'loaded-db db)
+								 
+								 (then (render-playlist)
+										 (preload-song))
+								 ))))
+(load-db)
 
 (defun song-def (name data)
   (let ((song (%js "{}")))
@@ -238,10 +246,12 @@
 									)))))
 
 (defun preload-song ()
-  (load-song 0 (lambda (song)
-					  (set next-song song)
-					  (set next-song.index 0)
-					  (set audioplayer.src song.data))))
+  (println 'preload-song)
+  (when (> playlist-element.childElementCount 0)
+	 (load-song 0 (lambda (song)
+						 (set next-song song)
+						 (set next-song.index 0)
+						 (set audioplayer.src song.data)))))
 
 (defun play-next-song ()
 
@@ -310,4 +320,28 @@
 (navigator.mediaSession.setActionHandler "seekforward" nil)
 (navigator.mediaSession.setActionHandler "seekbackward" nil)
 
-;(preload-song)
+
+;;       Skins         ;;
+(defvar skin-dropdown (get-element "skinDropdown"))
+(defvar theme-element (get-element "theme"))
+(defun remove-children(element)
+  (loop element.children.length
+	 (element.removeChild (th element.children 0))))
+
+(defun on-skin-changed (e)
+  (println 'skin-changed? skin-dropdown.value)
+  (remove-children theme-element)
+  (when (equals? skin-dropdown.value "retro3d")
+	 (println 'load-retro3d)
+	 (load2 "lisp/retro3d.lisp")
+	 )
+  )
+(skin-dropdown.addEventListener "change" on-skin-changed)
+;(load "retro3d.lisp")
+;;      Playlist Selection      ;;
+
+(defvar playlist-dropdown (get-element "playlistDropdown"))
+
+(defun populate-playlists()
+
+  )
